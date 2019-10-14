@@ -107,8 +107,10 @@ function Find-ItemADS
             }
             return $true
         })]
+        [Parameter(Mandatory)]
         [System.IO.FileInfo]$Path,
-        [switch]$Recurse
+        [switch]$Recurse,
+        [switch]$ShowContent
     )
 
     if ($Recurse) {
@@ -118,6 +120,63 @@ function Find-ItemADS
     }
 
     foreach ($ObjectToAnalyze in $ObjectsToAnalyze) {
-        $ObjectToAnalyze | Get-Item -Stream * | Select-Object -Property FileName,Stream,Length
+        if ($ShowContent) {
+            $ObjectToAnalyze | Get-Item -Stream * | Where-Object {$_.stream -ne ':$DATA'} | Select-Object -Property FileName,Stream,Length,@{n='Content';e={
+                return $(Get-Content -Path "$($_.FileName):$($_.stream)")
+            }}
+        } else {
+            $ObjectToAnalyze | Get-Item -Stream * | Where-Object {$_.stream -ne ':$DATA'} | Select-Object -Property FileName,Stream,Length
+        }
+    }
+}
+
+function New-ItemADS {
+    <#
+    .SYNOPSIS
+        Creates Alternate Data Streams in specific files or folders.
+    .DESCRIPTION
+        Creates Alternate Data Streams in specific files or folders.
+    .PARAMETER Stream
+        Name of alternate data stream.
+    .PARAMETER Content
+        Content of the alternate data stream.
+    .PARAMETER ContentEncoding
+        Specified the content encoding type.
+    .PARAMETER ItemType
+        Type of item to hold the alternate data stream.
+    .PARAMETER Path
+        Path for the existing file or folder to hold the alternate data stream.
+    .EXAMPLE
+        PS C:\> <example usage>
+        This example creates directory with alternate data stream.
+    #>
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory)]
+        [string]
+        $Stream,
+        [Parameter(Mandatory)][string]$Content,
+        [Parameter(Mandatory)][ValidateSet('Ascii','UTF8')][string]$ContentEncoding,
+        [Parameter(Mandatory)][ValidateSet('File','Directory')][string]$ItemType,
+        [ValidateScript({
+            if ($ItemType -eq 'Directory') {
+                if(-Not ($_ | Test-Path) ){
+                throw "Path does not exist" 
+                }
+            }
+            return $true
+        })]
+        [System.IO.FileInfo]$Path
+    )
+
+    switch ($ItemType) {
+        'File' {write-host 'This function is currently not implemented'}
+        'Directory' {
+            $ItemADS = '{0}:{1}' -f $Path,$Stream
+            if (Test-Path $Path) { throw "Folder $Path already exists." } else {
+                New-Item $Path -ItemType Directory | Out-Null
+                Set-Content $ItemADS -Value $Content -Encoding $ContentEncoding
+            }
+        }
     }
 }
