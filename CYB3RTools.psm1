@@ -159,10 +159,8 @@ function New-ItemADS {
         [Parameter(Mandatory)][ValidateSet('Ascii','UTF8')][string]$ContentEncoding,
         [Parameter(Mandatory)][ValidateSet('File','Directory')][string]$ItemType,
         [ValidateScript({
-            if ($ItemType -eq 'Directory') {
-                if(-Not ($_ | Test-Path) ){
-                throw "Path does not exist" 
-                }
+            if(-Not ($_ | Test-Path) ){
+            throw "Path does not exist" 
             }
             return $true
         })]
@@ -172,11 +170,7 @@ function New-ItemADS {
     switch ($ItemType) {
         'File' {write-host 'This function is currently not implemented'}
         'Directory' {
-            $ItemADS = '{0}:{1}' -f $Path,$Stream
-            if (Test-Path $Path) { throw "Folder $Path already exists." } else {
-                New-Item $Path -ItemType Directory | Out-Null
-                Set-Content $ItemADS -Value $Content -Encoding $ContentEncoding
-            }
+            Set-Content $('{0}:{1}' -f $Path,$Stream) -Value $Content -Encoding $ContentEncoding -Force
         }
     }
 }
