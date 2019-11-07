@@ -14,16 +14,15 @@
        Configures the current console window title text to <<<This window is for installation>>>
 
     #>
-	[cmdletbinding()]
+    [cmdletbinding()]
     param(
-    [Parameter(Mandatory=$true,HelpMessage='Enter new console title.')][ValidateNotNullOrEmpty()][string]$TitleText
+        [Parameter(Mandatory = $true, HelpMessage = 'Enter new console title.')][ValidateNotNullOrEmpty()][string]$TitleText
     )
 
     $host.ui.RawUI.WindowTitle = $TitleText
 }
 
-function Save-ScreenCapture
-{
+function Save-ScreenCapture {
     <#
        .SYNOPSIS
        Takes the screeshot of all displays to bmp file.
@@ -53,12 +52,12 @@ function Save-ScreenCapture
         [string]$OutputFolder = "$env:Temp",
         [int]$RepetitionDurationSeconds = 0,
         [int]$RepetitionWaitMilliseconds = 0
-     )
+    )
     
     Add-Type -AssemblyName System.Windows.Forms
  
-    if (!(Test-Path $OutputFolder)) {New-Item $OutputFolder -ItemType Directory -Force | Out-Null}
-    $stopwatch =  [System.Diagnostics.Stopwatch]::StartNew()
+    if (!(Test-Path $OutputFolder)) { New-Item $OutputFolder -ItemType Directory -Force | Out-Null }
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     do {
         foreach ($SingleScreen in $([System.Windows.Forms.Screen]::AllScreens | Sort-Object -Property DeviceName)) {
             [string]$SingleScreeDeviceName = $SingleScreen.DeviceName.TrimStart('\\').split('\')[-1]
@@ -71,14 +70,13 @@ function Save-ScreenCapture
             $GraphicsObj.Dispose()
             $BitmapObj.Save($outputpath)
         }
-        if ([int]$($stopwatch.Elapsed.TotalMilliseconds) -le $($RepetitionDurationSeconds*1000)) {Start-Sleep -Milliseconds $RepetitionWaitMilliseconds}
+        if ([int]$($stopwatch.Elapsed.TotalMilliseconds) -le $($RepetitionDurationSeconds * 1000)) { Start-Sleep -Milliseconds $RepetitionWaitMilliseconds }
     } until (
-        [int]$($stopwatch.Elapsed.TotalMilliseconds) -gt $($RepetitionDurationSeconds*1000)
+        [int]$($stopwatch.Elapsed.TotalMilliseconds) -gt $($RepetitionDurationSeconds * 1000)
     )
 }
 
-function Find-ItemADS
-{
+function Find-ItemADS {
     <#
        .SYNOPSIS
        Finds Alternate Data Streams in files in specific folder(s).
@@ -98,15 +96,15 @@ function Find-ItemADS
     #>
     [CmdletBinding()]
     Param(
-        [ValidateScript({
-            if(-Not ($_ | Test-Path) ){
-                throw "Folder does not exist" 
-            }
-            if(-Not ($_ | Test-Path -PathType Container) ){
-                throw "The Path argument must be a Folder."
-            }
-            return $true
-        })]
+        [ValidateScript( {
+                if (-Not ($_ | Test-Path) ) {
+                    throw "Folder does not exist" 
+                }
+                if (-Not ($_ | Test-Path -PathType Container) ) {
+                    throw "The Path argument must be a Folder."
+                }
+                return $true
+            })]
         [Parameter(Mandatory)]
         [System.IO.FileInfo]$Path,
         [switch]$Recurse,
@@ -115,17 +113,20 @@ function Find-ItemADS
 
     if ($Recurse) {
         $ObjectsToAnalyze = Get-ChildItem -Path $Path -Recurse
-    } else {
+    }
+    else {
         $ObjectsToAnalyze = Get-ChildItem -Path $Path
     }
 
     foreach ($ObjectToAnalyze in $ObjectsToAnalyze) {
         if ($ShowContent) {
-            $ObjectToAnalyze | Get-Item -Stream * | Where-Object {$_.stream -ne ':$DATA'} | Select-Object -Property FileName,Stream,Length,@{n='Content';e={
-                return $(Get-Content -Path "$($_.FileName):$($_.stream)")
-            }}
-        } else {
-            $ObjectToAnalyze | Get-Item -Stream * | Where-Object {$_.stream -ne ':$DATA'} | Select-Object -Property FileName,Stream,Length
+            $ObjectToAnalyze | Get-Item -Stream * | Where-Object { $_.stream -ne ':$DATA' } | Select-Object -Property FileName, Stream, Length, @{n = 'Content'; e = {
+                    return $(Get-Content -Path "$($_.FileName):$($_.stream)")
+                }
+            }
+        }
+        else {
+            $ObjectToAnalyze | Get-Item -Stream * | Where-Object { $_.stream -ne ':$DATA' } | Select-Object -Property FileName, Stream, Length
         }
     }
 }
@@ -156,21 +157,43 @@ function New-ItemADS {
         [string]
         $Stream,
         [Parameter(Mandatory)][string]$Content,
-        [Parameter(Mandatory)][ValidateSet('Ascii','UTF8')][string]$ContentEncoding,
-        [Parameter(Mandatory)][ValidateSet('File','Directory')][string]$ItemType,
-        [ValidateScript({
-            if(-Not ($_ | Test-Path) ){
-            throw "Path does not exist" 
-            }
-            return $true
-        })]
+        [Parameter(Mandatory)][ValidateSet('Ascii', 'UTF8')][string]$ContentEncoding,
+        [Parameter(Mandatory)][ValidateSet('File', 'Directory')][string]$ItemType,
+        [ValidateScript( {
+                if (-Not ($_ | Test-Path) ) {
+                    throw "Path does not exist" 
+                }
+                return $true
+            })]
         [System.IO.FileInfo]$Path
     )
 
     switch ($ItemType) {
-        'File' {write-host 'This function is currently not implemented'}
+        'File' { write-host 'This function is currently not implemented' }
         'Directory' {
-            Set-Content $('{0}:{1}' -f $Path,$Stream) -Value $Content -Encoding $ContentEncoding -Force
+            Set-Content $('{0}:{1}' -f $Path, $Stream) -Value $Content -Encoding $ContentEncoding -Force
         }
     }
+}
+
+function Watch-CYB3RToolsDefense {
+    <#
+    .SYNOPSIS
+        Waits until detects potential monitoring or analysis tool.
+    .DESCRIPTION
+        Waits until detects potential monitoring or analysis tool.
+    #>
+    [cmdletbinding()]
+    param()
+    $JobName = Get-Random
+    Register-WMIEvent -Query "SELECT * FROM __InstanceCreationEvent WITHIN 3 WHERE TargetInstance ISA 'Win32_Process' AND (TargetInstance.Name = 'mmc.exe' OR TargetInstance.Name = 'taskmgr.exe' OR TargetInstance.Name = 'procexp.exe' OR TargetInstance.Name = 'procexp64.exe')"`
+        -sourceIdentifier "WatchDefense$JobName" -action { 'Detected' } | out-null
+
+    Write-Verbose "Watching defense processes..."
+    do {
+        Start-Sleep -Seconds 1
+    }
+    until ($(Get-Job -Name "WatchDefense$JobName" | Select-Object -ExpandProperty HasMoreData) -eq $true)
+    Write-Verbose "Defense Detected!"
+    Get-Job -Name "WatchDefense$JobName" | stop-job -passthru | remove-job -Force
 }
