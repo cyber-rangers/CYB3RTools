@@ -243,7 +243,9 @@ function Disable-PSScriptBlockInvocationLogging {
     Set-ItemProperty $RegistryPath -Name EnableScriptBlockInvocationLogging -Value "0" 
 }
 
-function Disable-ExecutionPolicy {($ctx = $ExecutionContext.GetType().getfield("_context","nonpublic,instance").getvalue($ExecutionContext)).gettype().getfield("_authorizationManager","nonpublic,instance").setvalue($ctx, (New-Object System.Management.Automation.AuthorizationManager "Microsoft.PowerShell"))}
+function Disable-ExecutionPolicy {
+    ($ctx = $ExecutionContext.GetType().getfield("_context","nonpublic,instance").getvalue($ExecutionContext)).gettype().getfield("_authorizationManager","nonpublic,instance").setvalue($ctx, (New-Object System.Management.Automation.AuthorizationManager "Microsoft.PowerShell"))
+}
 
 function Send-FileLinesToAzLA {
     [cmdletbinding()]
