@@ -360,3 +360,156 @@ function Send-FileLinesToAzLA {
 
     Write-Host "$(get-date -Format s) Completed." -ForegroundColor white -BackgroundColor blue
 }
+
+function Test-Credentials {
+	[CmdletBinding()]
+	[OutputType([bool])]
+	Param (
+		[Parameter(ValueFromPipeLine = $true,ValueFromPipelineByPropertyName = $true)]
+		[Alias('PSCredential')]
+		[ValidateNotNull()]
+		[System.Management.Automation.PSCredential]
+		[System.Management.Automation.Credential()]
+		$Credentials
+	)
+
+	$Domain = $null
+
+	if ($Credentials -eq $null) {
+		throw "Failed to validate credentials."
+	}
+
+	try {
+		$Domain = New-Object System.DirectoryServices.DirectoryEntry(("LDAP://" + ([ADSI]'').distinguishedName), $credentials.username, $credentials.GetNetworkCredential().password)
+	}
+	catch {
+		$_.Exception.Message
+		Continue
+	}
+
+	if (!$domain) {
+		throw "Unexpected Error"
+	}
+	else {
+		if ($null -ne $domain.name) {
+			return $true
+		}
+		else {
+			return $false
+		}
+	}
+}
+
+function Test-RunningAsAdministrator {
+    ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+}
+
+function Get-ForensicProcess {
+	[CmdletBinding()]
+	param(
+        [ValidateSet("MACTripleDES", "MD5", "RIPEMD160", "SHA1", "SHA256", "SHA384", "SHA512")]
+		[string]$Algorithm,
+        [ValidateNotNullOrEmpty()]
+        [string]$Name
+    )
+
+    if (-not (Test-RunningAsAdministrator)) {
+        Write-Warning 'To be able to read all properties, we suggest to run this command as an administrator'
+    }
+
+    if ($Name) {
+        $Processes = Get-WmiObject Win32_Process -DirectRead | Where-Object {$_.name -eq $Name}
+    } else {
+        $Processes = Get-WmiObject Win32_Process -DirectRead
+    }
+
+    if (($Processes | Measure-Object | Select-Object -ExpandProperty Count) -lt 1) {
+        throw ('Cannot find a process with the name "{0}". Verify the process name and call the cmdlet again.' -f $Name)
+    }
+
+	$CollectionDateTime = [datetime]::UtcNow
+	$Computer = [System.Net.Dns]::GetHostByName($env:computerName).HostName
+	$Processes | Select-Object -Property `
+        @{n = 'Computer'; e = { $Computer } }, `
+	    @{n = 'CollectionDateTime'; e = { $CollectionDateTime } }, `
+	    CommandLine,
+	    ExecutablePath, `
+	    Name, `
+	    ParentProcessId, `
+	    ProcessId, `
+	    VirtualSize, `
+	    WorkingSetSize, `
+	    Path, `
+        SessionId, `
+        @{n='StartTime';e={[System.Diagnostics.Process]::GetProcessById($_.processid).starttime}}, `
+        @{n='FileVersion';e={[System.Diagnostics.Process]::GetProcessById($_.processid).fileversion.split(' ')[0]}}, `
+        @{n='ProductVersion';e={[System.Diagnostics.Process]::GetProcessById($_.processid).ProductVersion.split(' ')[0]}}, `
+        @{n='Company';e={[System.Diagnostics.Process]::GetProcessById($_.processid).Company}}, `
+        @{n='WindowStyle';e={[System.Diagnostics.Process]::GetProcessById($_.processid).StartInfo.WindowStyle}}, `
+        @{n='MainWindowTitle';e={[System.Diagnostics.Process]::GetProcessById($_.processid).MainWindowTitle}}, `
+	    @{Name = "Owner"; Expression = {
+		    $ProcessOwner = ''; $ProcessOwner = $_.GetOwner()
+		    if ($ProcessOwner.ReturnValue -eq 0) {
+			    $ProcessOwner.Domain + "\" + $ProcessOwner.User
+		    }
+		    }
+	    }, `
+	    @{Name = "OwnerSID"; Expression = { $_.GetOwnerSid().Sid } }, `
+	    @{n = 'Hash'; e = { if ($Algorithm) {$(Get-ForensicHash -FilePath $_.Path -Algorithm $Algorithm).Hash.ToString()} } }
+}
+
+function Get-ForensicHash {
+	param
+	(
+		[Parameter(Mandatory = $true, ParameterSetName = 'Object')]
+		$InputObject,
+		[Parameter(Mandatory = $true, ParameterSetName = 'File')]
+		[string]
+		[ValidateNotNullOrEmpty()]
+		$FilePath,
+		[Parameter(Mandatory = $true, ParameterSetName = 'Text')]
+		[string]
+		[ValidateNotNullOrEmpty()]
+		$Text,
+		[Parameter(ParameterSetName = 'Text')]
+		[string]
+		[ValidateSet('ASCII', 'BigEndianUnicode', 'Default', 'Unicode', 'UTF32', 'UTF7', 'UTF8')]
+		$Encoding = 'Unicode',
+		[Parameter()]
+		[string]
+		[ValidateSet("MACTripleDES", "MD5", "RIPEMD160", "SHA1", "SHA256", "SHA384", "SHA512")]
+		$Algorithm = "SHA256"
+	)
+
+	switch ($PSCmdlet.ParameterSetName) {
+		File {
+			try {
+				$null = Resolve-Path -Path $FilePath -ErrorAction Stop
+				$InputObject = [System.IO.File]::OpenRead($FilePath)
+				Get-ForensicHash -InputObject $InputObject -Algorithm $Algorithm
+			}
+			catch {
+				$returnvalue = New-Object -TypeName psobject -Property @{
+					Algorithm = $Algorithm.ToUpperInvariant()
+					Hash      = $null
+				}
+			}
+		}
+		Text {
+			$InputObject = [System.Text.Encoding]::$Encoding.GetBytes($Text)
+			Get-ForensicHash -InputObject $InputObject -Algorithm $Algorithm
+		}
+		Object {
+			if ($InputObject.GetType() -eq [Byte[]] -or $InputObject.GetType().BaseType -eq [System.IO.Stream]) {
+				$hasher = [System.Security.Cryptography.HashAlgorithm]::Create($Algorithm)
+				[Byte[]] $computedHash = $Hasher.ComputeHash($InputObject)
+				[string] $hash = [BitConverter]::ToString($computedHash) -replace '-', ''
+				$returnvalue = New-Object -TypeName psobject -Property @{
+					Algorithm = $Algorithm.ToUpperInvariant()
+					Hash      = $hash
+				}
+				$returnvalue
+			}
+		}
+	}
+}
