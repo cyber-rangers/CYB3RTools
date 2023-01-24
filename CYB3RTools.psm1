@@ -1,4 +1,4 @@
-﻿function Set-ConsoleTitle {
+function Set-ConsoleTitle {
     <#
        .SYNOPSIS
        Sets the console window title to the defined text.
@@ -244,7 +244,7 @@ function Disable-PSScriptBlockInvocationLogging {
 }
 
 function Disable-ExecutionPolicy {
-    ($ctx = $ExecutionContext.GetType().getfield("_context","nonpublic,instance").getvalue($ExecutionContext)).gettype().getfield("_authorizationManager","nonpublic,instance").setvalue($ctx, (New-Object System.Management.Automation.AuthorizationManager "Microsoft.PowerShell"))
+    ($ctx = $ExecutionContext.GetType().getfield("_context", "nonpublic,instance").getvalue($ExecutionContext)).gettype().getfield("_authorizationManager", "nonpublic,instance").setvalue($ctx, (New-Object System.Management.Automation.AuthorizationManager "Microsoft.PowerShell"))
 }
 
 function Send-FileLinesToAzLA {
@@ -337,12 +337,13 @@ function Send-FileLinesToAzLA {
             $objects_paged.Add($obj) | Out-Null
         }
 
-        if ($LineNumber%$Paging -eq 0) {
+        if ($LineNumber % $Paging -eq 0) {
             Write-Host "$(get-date -Format s) Sending $($PreviousSendLineNumber+1) - $LineNumber lines to AzLA..." -ForegroundColor black -BackgroundColor Yellow
             $result = Send-DataToAzureLA -Data $objects_paged -LogName $AzLACustomLogName -WorkspaceID $AzLAWorkspaceID -WorkspaceKey $AzLAPrimaryKey
             if ($result -ne 200) {
                 throw "$(get-date -Format s) Error Sending Data to Azure Log Analytics"
-            } else {
+            }
+            else {
                 Write-Host "$(get-date -Format s) `tSuccessfully completed." -ForegroundColor black -BackgroundColor green
             }
             $objects_paged.Clear()
@@ -356,7 +357,8 @@ function Send-FileLinesToAzLA {
     $result = Send-DataToAzureLA -Data $objects_paged -LogName $AzLACustomLogName -WorkspaceID $AzLAWorkspaceID -WorkspaceKey $AzLAPrimaryKey
     if ($result -ne 200) {
         throw "$(get-date -Format s) Error Sending Data to Azure Log Analytics"
-    } else {
+    }
+    else {
         Write-Host "$(get-date -Format s) `tSuccessfully completed." -ForegroundColor black -BackgroundColor green
     }
 
@@ -364,42 +366,42 @@ function Send-FileLinesToAzLA {
 }
 
 function Test-Credentials {
-	[CmdletBinding()]
-	[OutputType([bool])]
-	Param (
-		[Parameter(ValueFromPipeLine = $true,ValueFromPipelineByPropertyName = $true)]
-		[Alias('PSCredential')]
-		[ValidateNotNull()]
-		[System.Management.Automation.PSCredential]
-		[System.Management.Automation.Credential()]
-		$Credentials
-	)
+    [CmdletBinding()]
+    [OutputType([bool])]
+    Param (
+        [Parameter(ValueFromPipeLine = $true, ValueFromPipelineByPropertyName = $true)]
+        [Alias('PSCredential')]
+        [ValidateNotNull()]
+        [System.Management.Automation.PSCredential]
+        [System.Management.Automation.Credential()]
+        $Credentials
+    )
 
-	$Domain = $null
+    $Domain = $null
 
-	if ($Credentials -eq $null) {
-		throw "Failed to validate credentials."
-	}
+    if ($Credentials -eq $null) {
+        throw "Failed to validate credentials."
+    }
 
-	try {
-		$Domain = New-Object System.DirectoryServices.DirectoryEntry(("LDAP://" + ([ADSI]'').distinguishedName), $credentials.username, $credentials.GetNetworkCredential().password)
-	}
-	catch {
-		$_.Exception.Message
-		Continue
-	}
+    try {
+        $Domain = New-Object System.DirectoryServices.DirectoryEntry(("LDAP://" + ([ADSI]'').distinguishedName), $credentials.username, $credentials.GetNetworkCredential().password)
+    }
+    catch {
+        $_.Exception.Message
+        Continue
+    }
 
-	if (!$domain) {
-		throw "Unexpected Error"
-	}
-	else {
-		if ($null -ne $domain.name) {
-			return $true
-		}
-		else {
-			return $false
-		}
-	}
+    if (!$domain) {
+        throw "Unexpected Error"
+    }
+    else {
+        if ($null -ne $domain.name) {
+            return $true
+        }
+        else {
+            return $false
+        }
+    }
 }
 
 function Test-RunningAsAdministrator {
@@ -407,10 +409,10 @@ function Test-RunningAsAdministrator {
 }
 
 function Get-ForensicProcess {
-	[CmdletBinding()]
-	param(
+    [CmdletBinding()]
+    param(
         [ValidateSet("MACTripleDES", "MD5", "RIPEMD160", "SHA1", "SHA256", "SHA384", "SHA512")]
-		[string]$Algorithm,
+        [string]$Algorithm,
         [ValidateNotNullOrEmpty()]
         [string]$Name
     )
@@ -420,8 +422,9 @@ function Get-ForensicProcess {
     }
 
     if ($Name) {
-        $Processes = Get-WmiObject Win32_Process -DirectRead | Where-Object {$_.name -eq $Name}
-    } else {
+        $Processes = Get-WmiObject Win32_Process -DirectRead | Where-Object { $_.name -eq $Name }
+    }
+    else {
         $Processes = Get-WmiObject Win32_Process -DirectRead
     }
 
@@ -429,89 +432,112 @@ function Get-ForensicProcess {
         throw ('Cannot find a process with the name "{0}". Verify the process name and call the cmdlet again.' -f $Name)
     }
 
-	$CollectionDateTime = [datetime]::UtcNow
-	$Computer = [System.Net.Dns]::GetHostByName($env:computerName).HostName
-	$Processes | Select-Object -Property `
-        @{n = 'Computer'; e = { $Computer } }, `
-	    @{n = 'CollectionDateTime'; e = { $CollectionDateTime } }, `
-	    CommandLine,
-	    ExecutablePath, `
-	    Name, `
-	    ParentProcessId, `
-	    ProcessId, `
-	    VirtualSize, `
-	    WorkingSetSize, `
-	    Path, `
+    $CollectionDateTime = [datetime]::UtcNow
+    $Computer = [System.Net.Dns]::GetHostByName($env:computerName).HostName
+    $Processes | Select-Object -Property `
+    @{n = 'Computer'; e = { $Computer } }, `
+    @{n = 'CollectionDateTime'; e = { $CollectionDateTime } }, `
+        CommandLine,
+    ExecutablePath, `
+        Name, `
+        ParentProcessId, `
+        ProcessId, `
+        VirtualSize, `
+        WorkingSetSize, `
+        Path, `
         SessionId, `
-        @{n='StartTime';e={[System.Diagnostics.Process]::GetProcessById($_.processid).starttime}}, `
-        @{n='FileVersion';e={[System.Diagnostics.Process]::GetProcessById($_.processid).fileversion.split(' ')[0]}}, `
-        @{n='ProductVersion';e={[System.Diagnostics.Process]::GetProcessById($_.processid).ProductVersion.split(' ')[0]}}, `
-        @{n='Company';e={[System.Diagnostics.Process]::GetProcessById($_.processid).Company}}, `
-        @{n='WindowStyle';e={[System.Diagnostics.Process]::GetProcessById($_.processid).StartInfo.WindowStyle}}, `
-        @{n='MainWindowTitle';e={[System.Diagnostics.Process]::GetProcessById($_.processid).MainWindowTitle}}, `
-	    @{Name = "Owner"; Expression = {
-		    $ProcessOwner = ''; $ProcessOwner = $_.GetOwner()
-		    if ($ProcessOwner.ReturnValue -eq 0) {
-			    $ProcessOwner.Domain + "\" + $ProcessOwner.User
-		    }
-		    }
-	    }, `
-	    @{Name = "OwnerSID"; Expression = { $_.GetOwnerSid().Sid } }, `
-	    @{n = 'Hash'; e = { if ($Algorithm) {$(Get-ForensicHash -FilePath $_.Path -Algorithm $Algorithm).Hash.ToString()} } }
+    @{n = 'StartTime'; e = { [System.Diagnostics.Process]::GetProcessById($_.processid).starttime } }, `
+    @{n = 'FileVersion'; e = { [System.Diagnostics.Process]::GetProcessById($_.processid).fileversion.split(' ')[0] } }, `
+    @{n = 'ProductVersion'; e = { [System.Diagnostics.Process]::GetProcessById($_.processid).ProductVersion.split(' ')[0] } }, `
+    @{n = 'Company'; e = { [System.Diagnostics.Process]::GetProcessById($_.processid).Company } }, `
+    @{n = 'WindowStyle'; e = { [System.Diagnostics.Process]::GetProcessById($_.processid).StartInfo.WindowStyle } }, `
+    @{n = 'MainWindowTitle'; e = { [System.Diagnostics.Process]::GetProcessById($_.processid).MainWindowTitle } }, `
+    @{Name = "Owner"; Expression = {
+            $ProcessOwner = ''; $ProcessOwner = $_.GetOwner()
+            if ($ProcessOwner.ReturnValue -eq 0) {
+                $ProcessOwner.Domain + "\" + $ProcessOwner.User
+            }
+        }
+    }, `
+    @{Name = "OwnerSID"; Expression = { $_.GetOwnerSid().Sid } }, `
+    @{n = 'Hash'; e = { if ($Algorithm) { $(Get-ForensicHash -FilePath $_.Path -Algorithm $Algorithm).Hash.ToString() } } }
 }
 
 function Get-ForensicHash {
-	param
-	(
-		[Parameter(Mandatory = $true, ParameterSetName = 'Object')]
-		$InputObject,
-		[Parameter(Mandatory = $true, ParameterSetName = 'File')]
-		[string]
-		[ValidateNotNullOrEmpty()]
-		$FilePath,
-		[Parameter(Mandatory = $true, ParameterSetName = 'Text')]
-		[string]
-		[ValidateNotNullOrEmpty()]
-		$Text,
-		[Parameter(ParameterSetName = 'Text')]
-		[string]
-		[ValidateSet('ASCII', 'BigEndianUnicode', 'Default', 'Unicode', 'UTF32', 'UTF7', 'UTF8')]
-		$Encoding = 'Unicode',
-		[Parameter()]
-		[string]
-		[ValidateSet("MACTripleDES", "MD5", "RIPEMD160", "SHA1", "SHA256", "SHA384", "SHA512")]
-		$Algorithm = "SHA256"
-	)
+    param
+    (
+        [Parameter(Mandatory = $true, ParameterSetName = 'Object')]
+        $InputObject,
+        [Parameter(Mandatory = $true, ParameterSetName = 'File')]
+        [string]
+        [ValidateNotNullOrEmpty()]
+        $FilePath,
+        [Parameter(Mandatory = $true, ParameterSetName = 'Text')]
+        [string]
+        [ValidateNotNullOrEmpty()]
+        $Text,
+        [Parameter(ParameterSetName = 'Text')]
+        [string]
+        [ValidateSet('ASCII', 'BigEndianUnicode', 'Default', 'Unicode', 'UTF32', 'UTF7', 'UTF8')]
+        $Encoding = 'Unicode',
+        [Parameter()]
+        [string]
+        [ValidateSet("MACTripleDES", "MD5", "RIPEMD160", "SHA1", "SHA256", "SHA384", "SHA512")]
+        $Algorithm = "SHA256"
+    )
 
-	switch ($PSCmdlet.ParameterSetName) {
-		File {
-			try {
-				$null = Resolve-Path -Path $FilePath -ErrorAction Stop
-				$InputObject = [System.IO.File]::OpenRead($FilePath)
-				Get-ForensicHash -InputObject $InputObject -Algorithm $Algorithm
-			}
-			catch {
-				$returnvalue = New-Object -TypeName psobject -Property @{
-					Algorithm = $Algorithm.ToUpperInvariant()
-					Hash      = $null
-				}
-			}
-		}
-		Text {
-			$InputObject = [System.Text.Encoding]::$Encoding.GetBytes($Text)
-			Get-ForensicHash -InputObject $InputObject -Algorithm $Algorithm
-		}
-		Object {
-			if ($InputObject.GetType() -eq [Byte[]] -or $InputObject.GetType().BaseType -eq [System.IO.Stream]) {
-				$hasher = [System.Security.Cryptography.HashAlgorithm]::Create($Algorithm)
-				[Byte[]] $computedHash = $Hasher.ComputeHash($InputObject)
-				[string] $hash = [BitConverter]::ToString($computedHash) -replace '-', ''
-				$returnvalue = New-Object -TypeName psobject -Property @{
-					Algorithm = $Algorithm.ToUpperInvariant()
-					Hash      = $hash
-				}
-				$returnvalue
-			}
-		}
-	}
+    switch ($PSCmdlet.ParameterSetName) {
+        File {
+            try {
+                $null = Resolve-Path -Path $FilePath -ErrorAction Stop
+                $InputObject = [System.IO.File]::OpenRead($FilePath)
+                Get-ForensicHash -InputObject $InputObject -Algorithm $Algorithm
+            }
+            catch {
+                $returnvalue = New-Object -TypeName psobject -Property @{
+                    Algorithm = $Algorithm.ToUpperInvariant()
+                    Hash      = $null
+                }
+            }
+        }
+        Text {
+            $InputObject = [System.Text.Encoding]::$Encoding.GetBytes($Text)
+            Get-ForensicHash -InputObject $InputObject -Algorithm $Algorithm
+        }
+        Object {
+            if ($InputObject.GetType() -eq [Byte[]] -or $InputObject.GetType().BaseType -eq [System.IO.Stream]) {
+                $hasher = [System.Security.Cryptography.HashAlgorithm]::Create($Algorithm)
+                [Byte[]] $computedHash = $Hasher.ComputeHash($InputObject)
+                [string] $hash = [BitConverter]::ToString($computedHash) -replace '-', ''
+                $returnvalue = New-Object -TypeName psobject -Property @{
+                    Algorithm = $Algorithm.ToUpperInvariant()
+                    Hash      = $hash
+                }
+                $returnvalue
+            }
+        }
+    }
+}
+
+function New-Password {
+    [cmdletbinding()]
+    param(
+        [ValidateRange(4, 512)][int]$Length = 14,
+        [ValidateScript({ if ($_ -lt $Length) { $true } else { throw 'NumberOfSymbols must be less then Length' } })]
+        [int]$NumberOfSymbols = 1
+    )
+
+    $passwordArray = 'abcdefghkmnrstuvwxyzABCDEFGHKLMNPRSTUVWXYZ23456789'.ToCharArray()
+
+    if ($NumberOfSymbols -eq 0) {
+        $password = ( -join ($passwordArray | Get-Random -Count $Length))
+        return $password
+    }
+    else {
+        $password = ( -join ($passwordArray | Get-Random -Count ($Length - $NumberOfSymbols)))
+        0..($NumberOfSymbols - 1) | ForEach-Object {
+            $password = $password.Insert((Get-Random -Maximum ($Length - $NumberOfSymbols + $_)), ( -join ('.,;+-/#@'.ToCharArray() | Get-Random)))
+        }
+        return $password   
+    }
 }
