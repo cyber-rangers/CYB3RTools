@@ -541,3 +541,26 @@ function New-Password {
         return $password   
     }
 }
+
+function Expand-7zArchive {
+    [cmdletbinding()]
+    param(
+        [string]$FilePath,
+        [string]$DestinationFolder,
+        [securestring]$Password
+    )
+
+    if (!$(Test-Path 'C:\Program Files\7-Zip\7z.exe')) {
+        throw "Unable to find 7-zip. Please install it first."
+    }
+
+    Write-Verbose "$FilePath exists, unzipping using 7-zip to $DestinationFolder..."
+    if ($PSBoundParameters.ContainsKey('Password')) {
+        $bstrPassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($Password))
+        $arguments = 'x {0} * -p{1} -o{2} -aoa' -f $FilePath, $bstrPassword, $DestinationFolder
+    } else {
+        $arguments = 'x {0} * -o{1} -aoa' -f $FilePath, $DestinationFolder
+    }
+    Start-Process 'C:\Program Files\7-Zip\7z.exe' -ArgumentList $arguments -NoNewWindow -Wait
+    Write-Verbose "$FilePath successfully extracted using 7-zip to $DestinationFolder."
+}
