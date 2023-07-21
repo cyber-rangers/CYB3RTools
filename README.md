@@ -2,10 +2,6 @@
 
 This repo contains powershell definition files for CYB3RTools powershell module. 
 
-Module is also available for download and install on PowerShell Gallery. Use the following command for installation:
-
-```powershell
-Install-Module -Name CYB3RTools
-```
+Module is no longer maintained on PowerShell Gallery.
 
 Team Cyber Rangers.
